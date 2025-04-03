@@ -1,0 +1,4 @@
+aio-pika
+pika
+pygame
+rabbitmq-admin
