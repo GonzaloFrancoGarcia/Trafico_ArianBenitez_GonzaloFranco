@@ -1,4 +1,5 @@
-# simulacion_trafico/environment/vehicle.py
+
+# simulacion_trafico/entorno/vehicle.py
 
 class Vehicle:
     """
@@ -13,8 +14,6 @@ class Vehicle:
     def move(self):
         """
         Actualiza la posición del vehículo en función de su dirección y velocidad.
-        Aquí se usa un modelo muy simplificado; en un motor real se realizarían
-        cálculos de física, detección de colisiones, etc.
         """
         x, y = self.position
 
