@@ -4,10 +4,14 @@
 
 simulacion_trafico/
 ├── main.py
+├── zona_runner.py
 ├── README.md
 ├── environment
 │   ├── __init__.py
 │   ├── city.py
+│   ├── intersection.py
+│   ├── test_city_runner.py
+│   ├── test_intersection_runner.py
 │   ├── traffic_light.py
 │   └── vehicle.py
 ├── simulation
@@ -18,7 +22,11 @@ simulacion_trafico/
 │   └── tasks.py
 ├── distribution
 │   ├── __init__.py
-│   └── rabbit_client.py
+│   ├── protocolo.py
+│   ├── rabbit_client.py
+│   ├── rabbitmp_client.py
+│   ├── send_vehicle_to_zona_distribuida.py
+│   └── zona_distribuida_runner.py
 ├── performance
 │   ├── __init__.py
 │   └── metrics.py
