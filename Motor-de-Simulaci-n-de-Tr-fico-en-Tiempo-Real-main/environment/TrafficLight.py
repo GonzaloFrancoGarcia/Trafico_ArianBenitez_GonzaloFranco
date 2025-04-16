@@ -4,14 +4,13 @@ class TrafficLight:
     """
     Clase que modela un semáforo con tiempos específicos para cada estado.
     """
-    def __init__(self, id_, x=0, y=0, green_time=4, yellow_time=1, red_time=3):
+    def __init__(self, id_, x=0, y=0, green_time=10, yellow_time=3, red_time=10):
         self.id_ = id_
         self.x = x
         self.y = y
         self.green_time = green_time
         self.yellow_time = yellow_time
         self.red_time = red_time
-
         self.current_state = "RED"  # Estado inicial
         self.timer = 0  # Contador interno para el cambio de estado
 
@@ -20,7 +19,6 @@ class TrafficLight:
         Cambia el estado del semáforo en función del tiempo transcurrido.
         """
         self.timer += 1
-
         if self.current_state == "GREEN":
             if self.timer >= self.green_time:
                 self._change_state("YELLOW")
