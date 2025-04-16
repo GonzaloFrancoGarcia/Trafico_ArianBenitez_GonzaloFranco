@@ -46,45 +46,49 @@ async def launch_gui(simulator):
         snapshot = simulator.get_snapshot()
 
         # Dibujar semáforos
-        for tl in snapshot["traffic_lights"]:
+        for tl in snapshot.get("traffic_lights", []):
             try:
-                x = int(tl["x"] + camera_offset[0])
-                y = int(tl["y"] + camera_offset[1])
+                x = int(tl.get("x", 0) + camera_offset[0])
+                y = int(tl.get("y", 0) + camera_offset[1])
+                # Solo dibujar si el semáforo está dentro de la ventana
                 if 0 <= x <= WIDTH and 0 <= y <= HEIGHT:
-                    estado = tl.get("estado", "RED")
+                    estado = tl.get("estado", "RED").upper()
                     if estado == "GREEN":
                         color = (0, 255, 0)
                     elif estado == "YELLOW":
                         color = (255, 255, 0)
                     else:
                         color = (255, 0, 0)
-
+                    
                     pygame.draw.circle(screen, color, (x, y), 15)
                     label = font.render(estado, True, FONT_COLOR)
                     screen.blit(label, (x - 20, y + 20))
-            except:
+            except Exception as e:
+                print("Error al renderizar semáforo:", e)
                 continue
 
         # Dibujar vehículos
-        for v in snapshot["vehicles"]:
+        for v in snapshot.get("vehicles", []):
             try:
-                x = int(v["x"] + camera_offset[0])
-                y = int(v["y"] + camera_offset[1])
+                x = int(v.get("x", 0) + camera_offset[0])
+                y = int(v.get("y", 0) + camera_offset[1])
                 if 0 <= x <= WIDTH and 0 <= y <= HEIGHT:
                     rect = pygame.Rect(x, y, 20, 10)
                     pygame.draw.rect(screen, VEHICLE_COLOR, rect)
-            except:
+            except Exception as e:
+                print("Error al renderizar vehículo:", e)
                 continue
 
         # Mostrar estadísticas
-        stats = f"Vehículos: {len(snapshot['vehicles'])}"
+        stats = f"Vehículos: {len(snapshot.get('vehicles', []))}"
         fps_text = f"FPS: {int(clock.get_fps())}"
         screen.blit(font.render(stats, True, FONT_COLOR), (10, 10))
         screen.blit(font.render(fps_text, True, FPS_COLOR), (10, 30))
 
-        # Actualizar pantalla
+        # Actualizar pantalla y sincronizar el loop
         pygame.display.flip()
-        await asyncio.sleep(0)  # Mejor sincronía con el bucle de Pygame
+        # Se cede el control al loop de asyncio para evitar bloqueos
+        await asyncio.sleep(0.001)
         clock.tick(30)
 
     pygame.quit()
