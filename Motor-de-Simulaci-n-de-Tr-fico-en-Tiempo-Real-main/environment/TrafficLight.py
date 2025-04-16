@@ -1,4 +1,3 @@
-
 # simulacion_trafico/entorno/traffic_light.py
 
 import asyncio
@@ -7,8 +6,10 @@ class TrafficLight:
     """
     Clase que modela un semáforo con tiempos específicos para cada estado.
     """
-    def __init__(self, id_, green_time=4, yellow_time=1, red_time=3):
+    def __init__(self, id_, x=0, y=0, green_time=4, yellow_time=1, red_time=3):
         self.id_ = id_
+        self.x = x
+        self.y = y
         self.green_time = green_time
         self.yellow_time = yellow_time
         self.red_time = red_time

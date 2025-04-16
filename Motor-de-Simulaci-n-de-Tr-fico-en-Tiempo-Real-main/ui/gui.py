@@ -45,32 +45,28 @@ async def launch_gui(simulator):
         # Obtener snapshot del simulador
         snapshot = simulator.get_snapshot()
 
-        # Dibujar semáforos
-        for i, tl_info in enumerate(snapshot["traffic_lights"]):
-            estado = "RED"
-            if "GREEN" in tl_info:
+        # Dibujar semáforos usando coordenadas reales
+        for tl in snapshot["traffic_lights"]:
+            x = int(tl.get("x", 0)) + camera_offset[0]
+            y = int(tl.get("y", 0)) + camera_offset[1]
+            estado = tl.get("estado", "RED")
+            if estado == "GREEN":
                 color = (0, 255, 0)
-                estado = "GREEN"
-            elif "YELLOW" in tl_info:
+            elif estado == "YELLOW":
                 color = (255, 255, 0)
-                estado = "YELLOW"
             else:
                 color = (255, 0, 0)
 
-            x, y = 100 + i*100 + camera_offset[0], 50 + camera_offset[1]
             pygame.draw.circle(screen, color, (x, y), 15)
             label = font.render(estado, True, FONT_COLOR)
             screen.blit(label, (x - 20, y + 20))
 
         # Dibujar vehículos
-        for v_info in snapshot["vehicles"]:
+        for v in snapshot["vehicles"]:
             try:
-                id_part = v_info.split("at position (")[1]
-                pos_str = id_part.split(")")[0]
-                x, y = map(float, pos_str.split(","))
-                x += camera_offset[0]
-                y += camera_offset[1]
-                rect = pygame.Rect(int(x), int(y), 20, 10)
+                x = int(v["x"] + camera_offset[0])
+                y = int(v["y"] + camera_offset[1])
+                rect = pygame.Rect(x, y, 20, 10)
                 pygame.draw.rect(screen, VEHICLE_COLOR, rect)
             except:
                 pass
