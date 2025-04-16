@@ -11,10 +11,7 @@ FONT_COLOR = (255, 255, 255)
 FPS_COLOR = (200, 200, 200)
 
 CAMERA_SPEED = 5
-
-# Factor de escala (1.0 = sin escala).
-# Aumenta para "acercar" o reduce para "alejar" el mapa.
-SCALE = 1.0
+SCALE = 1.0  # Factor de escala (puedes ajustar si las coordenadas del mundo son muy grandes o pequeñas)
 
 async def launch_gui(simulator):
     pygame.init()
@@ -25,8 +22,8 @@ async def launch_gui(simulator):
 
     running = True
 
-    # Ajuste de la cámara para que (0,0) quede en el centro de la ventana
-    camera_offset = [-(WIDTH // 2), -(HEIGHT // 2)]
+    # Ajuste de la cámara para que (0,0) (coordenadas del mundo) quede en el centro de la pantalla
+    camera_offset = [WIDTH // 2, HEIGHT // 2]
 
     while running:
         # Manejo de eventos
@@ -34,7 +31,7 @@ async def launch_gui(simulator):
             if event.type == pygame.QUIT:
                 running = False
 
-        # Movimiento de cámara con WASD o flechas
+        # Movimiento de cámara (las teclas modifican el offset)
         keys = pygame.key.get_pressed()
         if keys[pygame.K_LEFT] or keys[pygame.K_a]:
             camera_offset[0] += CAMERA_SPEED
@@ -54,11 +51,10 @@ async def launch_gui(simulator):
         # Dibujar semáforos
         for tl in snapshot.get("traffic_lights", []):
             try:
-                # Escalar y desplazar posiciones según offset
+                # Calcula la posición en pantalla: escala + offset
                 x = int(tl.get("x", 0) * SCALE + camera_offset[0])
                 y = int(tl.get("y", 0) * SCALE + camera_offset[1])
-
-                # Solo dibujar si el semáforo está dentro de la ventana
+                # Solo dibujar si está dentro de la ventana
                 if 0 <= x <= WIDTH and 0 <= y <= HEIGHT:
                     estado = tl.get("estado", "RED").upper()
                     if estado == "GREEN":
@@ -67,7 +63,7 @@ async def launch_gui(simulator):
                         color = (255, 255, 0)
                     else:
                         color = (255, 0, 0)
-
+                    
                     pygame.draw.circle(screen, color, (x, y), 15)
                     label = font.render(estado, True, FONT_COLOR)
                     screen.blit(label, (x - 20, y + 20))
@@ -95,7 +91,7 @@ async def launch_gui(simulator):
 
         # Actualizar pantalla y sincronizar el loop
         pygame.display.flip()
-        await asyncio.sleep(0.001)  # Cede el control al bucle asíncrono
+        await asyncio.sleep(0.001)
         clock.tick(30)
 
     pygame.quit()
