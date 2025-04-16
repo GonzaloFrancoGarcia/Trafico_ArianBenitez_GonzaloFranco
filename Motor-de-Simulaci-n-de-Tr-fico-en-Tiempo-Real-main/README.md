@@ -1,65 +1,118 @@
-# Motor de Simulador de Tráfico en Tiempo real
+# Motor de Simulación de Tráfico en Tiempo Real
 
-## Descripción
+Simulador urbano modular, visual y escalable para representar el tráfico en una ciudad virtual usando Python, Pygame, concurrencia y distribución con RabbitMQ.
 
+---
+
+## 📁 Estructura del Proyecto
+
+```bash
 simulacion_trafico/
-├── main.py
-├── zona_runner.py
+├── main.py                          # Lanzador principal de simulación local
+├── zona_runner.py                  # Simulación autónoma de una zona
 ├── README.md
-├── environment
+│
+├── environment/                    # Entidades urbanas
 │   ├── __init__.py
-│   ├── city.py
-│   ├── intersection.py
+│   ├── city.py                     # Contiene vehículos, semáforos, intersecciones
+│   ├── intersection.py             # Representa puntos de cruce
+│   ├── traffic_light.py            # Semáforo con lógica de tiempo
+│   ├── vehicle.py                  # Vehículo con posición, dirección, velocidad
 │   ├── test_city_runner.py
-│   ├── test_intersection_runner.py
-│   ├── traffic_light.py
-│   └── vehicle.py
-├── simulation
+│   └── test_intersection_runner.py
+│
+├── simulation/
 │   ├── __init__.py
-│   └── simulator.py
-├── concurrency
+│   └── simulator.py                # Motor de simulación (update() + snapshot)
+│
+├── concurrency/
 │   ├── __init__.py
-│   └── tasks.py
-├── distribution
+│   └── tasks.py                    # Bucle asíncrono de simulación
+│
+├── ui/
 │   ├── __init__.py
-│   ├── protocolo.py
-│   ├── rabbit_client.py
-│   ├── rabbitmp_client.py
+│   └── gui.py                      # Interfaz visual con Pygame, cámara, FPS
+│
+├── distribution/                   # Simulación distribuida y mensajería
+│   ├── __init__.py
+│   ├── protocolo.py                # Estructura estándar de mensajes
+│   ├── rabbit_client.py            # Cliente RabbitMQ (envío y consumo)
 │   ├── send_vehicle_to_zona_distribuida.py
-│   └── zona_distribuida_runner.py
-├── performance
+│   └── zona_distribuida_runner.py  # Microservicio de simulación de zona
+│
+├── performance/
 │   ├── __init__.py
-│   └── metrics.py
-└── ui
-    ├── __init__.py
-    └── gui.py
-
-
-
+│   └── metrics.py                  # (Placeholder) para logging y rendimiento
+```
 
 ---
 
-## Cómo iniciar y ampliar el proyecto
+## 🚀 Cómo ejecutar la simulación
 
-Con esto, ya tienes la base de una **estructura modular** en Python, pensada para crecer de forma ordenada. Los pasos recomendados para ampliarlo son:
+1. Instala dependencias:
+```bash
+pip install pygame aio-pika
+```
 
-1. **Experimentar con la lógica del `Simulator`** (archivo `simulator.py`) para manejar prioridades en intersecciones, colisiones, semáforos coordinados, etc.
+2. Ejecuta la simulación local:
+```bash
+python main.py
+```
 
-2. **Mejorar la interfaz** en `gui.py` usando:
-   - **Tkinter** para una interfaz de ventanas.
-   - **Pygame** para un entorno 2D/“gráfico” más dinámico.
-   - O cualquier otra librería que te interese.
+3. Ejecuta una zona independiente (modo distribuido):
+```bash
+python distribution/zona_distribuida_runner.py
+```
 
-3. **Agregar hilos o procesos** usando `concurrent.futures` (hilos/procesos) si la simulación requiere tareas más pesadas. (Por ejemplo, si integras cálculos de física más complejos o IA para los vehículos).
+4. Envía un vehículo a una zona (desde otra):
+```bash
+python distribution/send_vehicle_to_zona_distribuida.py
+```
 
-4. **Introducir RabbitMQ o mensajería** si quieres distribuir la simulación en varios nodos, cada uno simulando una parte distinta de la ciudad. En `distribution/rabbit_client.py` tienes un pequeño ejemplo con `aio-pika`. 
-
-5. **Añadir logs y métricas** (ver `performance/metrics.py`) para analizar cuellos de botella, tiempos de respuesta, etc.
+⚠️ Asegúrate de tener RabbitMQ ejecutándose en localhost.
 
 ---
 
-## ¡Listo!
+## 🧱 Cómo funciona
 
-Con esta guía y este esqueleto de proyecto, tienes una **base** para comenzar tu motor de simulación de tráfico en tiempo real. A partir de aquí, podrás **extender** cada módulo, añadir lógica más compleja y adaptar la arquitectura a tus necesidades. 
+- Cada tick de simulación actualiza vehículos y semáforos
+- La GUI se refresca con snapshot() en tiempo real
+- Cada zona puede correr como microservicio
+- Comunicación distribuida mediante colas RabbitMQ
+- Cámara desplazable, FPS visibles, panel de estadísticas
 
-¡Éxitos con tu proyecto de simulación!
+---
+
+## 🛠️ ¿Cómo extenderlo?
+
+1. Añadir detección de colisiones o congestión en simulator.py
+2. Ampliar interacciones en gui.py (crear botones, clics, zoom)
+3. Diseñar un mapa urbano completo desde city.py
+4. Escalar a múltiples zonas conectadas (más microservicios)
+5. Agregar pruebas de estrés y métrica de rendimiento
+6. Añadir IA de tráfico (decisión de dirección, prioridad, etc.)
+
+---
+
+## ⚡ Optimización aplicada
+
+- Render selectivo: solo se dibuja lo visible en cámara
+- asyncio + Pygame sincronizados para evitar lag
+- Datos estructurados (no strings) entre módulos
+- Código modular y desacoplado
+
+---
+
+## ✅ Estado actual
+
+- Fase 1 completada (entidades, simulación local)
+- Fase 2 completada (visualización, concurrencia, distribución)
+- Fase 3 completada (optimización, documentación técnica)
+
+---
+
+## 📦 Autores y Créditos
+
+Proyecto desarrollado por Arián Benítez y Gonzalo Franco 
+Coordinado por fases: visualización, simulación, distribución, mensajería, rendimiento.
+
