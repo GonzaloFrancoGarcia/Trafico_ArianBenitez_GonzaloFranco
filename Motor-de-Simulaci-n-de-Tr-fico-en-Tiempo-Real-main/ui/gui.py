@@ -45,31 +45,36 @@ async def launch_gui(simulator):
         # Obtener snapshot del simulador
         snapshot = simulator.get_snapshot()
 
-        # Dibujar semáforos usando coordenadas reales
+        # Dibujar semáforos
         for tl in snapshot["traffic_lights"]:
-            x = int(tl.get("x", 0)) + camera_offset[0]
-            y = int(tl.get("y", 0)) + camera_offset[1]
-            estado = tl.get("estado", "RED")
-            if estado == "GREEN":
-                color = (0, 255, 0)
-            elif estado == "YELLOW":
-                color = (255, 255, 0)
-            else:
-                color = (255, 0, 0)
+            try:
+                x = int(tl["x"] + camera_offset[0])
+                y = int(tl["y"] + camera_offset[1])
+                if 0 <= x <= WIDTH and 0 <= y <= HEIGHT:
+                    estado = tl.get("estado", "RED")
+                    if estado == "GREEN":
+                        color = (0, 255, 0)
+                    elif estado == "YELLOW":
+                        color = (255, 255, 0)
+                    else:
+                        color = (255, 0, 0)
 
-            pygame.draw.circle(screen, color, (x, y), 15)
-            label = font.render(estado, True, FONT_COLOR)
-            screen.blit(label, (x - 20, y + 20))
+                    pygame.draw.circle(screen, color, (x, y), 15)
+                    label = font.render(estado, True, FONT_COLOR)
+                    screen.blit(label, (x - 20, y + 20))
+            except:
+                continue
 
         # Dibujar vehículos
         for v in snapshot["vehicles"]:
             try:
                 x = int(v["x"] + camera_offset[0])
                 y = int(v["y"] + camera_offset[1])
-                rect = pygame.Rect(x, y, 20, 10)
-                pygame.draw.rect(screen, VEHICLE_COLOR, rect)
+                if 0 <= x <= WIDTH and 0 <= y <= HEIGHT:
+                    rect = pygame.Rect(x, y, 20, 10)
+                    pygame.draw.rect(screen, VEHICLE_COLOR, rect)
             except:
-                pass
+                continue
 
         # Mostrar estadísticas
         stats = f"Vehículos: {len(snapshot['vehicles'])}"
@@ -79,7 +84,7 @@ async def launch_gui(simulator):
 
         # Actualizar pantalla
         pygame.display.flip()
+        await asyncio.sleep(0)  # Mejor sincronía con el bucle de Pygame
         clock.tick(30)
-        await asyncio.sleep(0.01)
 
     pygame.quit()
