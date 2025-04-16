@@ -1,4 +1,3 @@
-
 # simulacion_trafico/entorno/city.py
 
 import asyncio
@@ -40,6 +39,49 @@ class City:
         summary += "Intersecciones:\n" + "\n".join(str(ix) for ix in self.intersections) + "\n"
         summary += "Vehículos:\n" + "\n".join(str(v) for v in self.vehicles) + "\n"
         return summary
+
+    def get_snapshot(self):
+        """
+        Devuelve una representación estructurada del estado actual para la GUI.
+        """
+        lights_info = []
+        for tl in self.traffic_lights:
+            try:
+                lights_info.append({
+                    "id": tl.id_,
+                    "x": tl.x,
+                    "y": tl.y,
+                    "estado": tl.current_state
+                })
+            except:
+                pass  # Si el semáforo no tiene posición, se ignora
+
+        vehicles_info = []
+        for v in self.vehicles:
+            vehicles_info.append({
+                "id": v.id_,
+                "x": v.position[0],
+                "y": v.position[1],
+                "speed": v.speed,
+                "direction": v.direction
+            })
+
+        intersections_info = []
+        for ix in self.intersections:
+            try:
+                intersections_info.append({
+                    "id": ix.id_,
+                    "x": ix.location[0],
+                    "y": ix.location[1]
+                })
+            except:
+                pass
+
+        return {
+            "traffic_lights": lights_info,
+            "vehicles": vehicles_info,
+            "intersections": intersections_info
+        }
 
     def __str__(self):
         return f"City: {self.name}, TrafficLights: {len(self.traffic_lights)}, Vehicles: {len(self.vehicles)}, Intersections: {len(self.intersections)}"
