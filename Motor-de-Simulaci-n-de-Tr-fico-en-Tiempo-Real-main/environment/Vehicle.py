@@ -1,4 +1,3 @@
-
 # simulacion_trafico/entorno/vehicle.py
 
 class Vehicle:
@@ -10,13 +9,13 @@ class Vehicle:
         self.position = position
         self.speed = speed
         self.direction = direction
+        self.moving = True  # Atributo agregado para indicar si el vehículo se está moviendo
 
     def move(self):
         """
         Actualiza la posición del vehículo en función de su dirección y velocidad.
         """
         x, y = self.position
-
         if self.direction == "NORTE":
             y += self.speed
         elif self.direction == "SUR":
@@ -25,7 +24,6 @@ class Vehicle:
             x += self.speed
         elif self.direction == "OESTE":
             x -= self.speed
-
         self.position = (x, y)
 
     def __str__(self):

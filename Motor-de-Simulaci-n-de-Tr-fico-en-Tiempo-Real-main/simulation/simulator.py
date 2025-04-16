@@ -4,12 +4,11 @@ import random
 def can_vehicle_proceed(vehicle, traffic_lights, threshold=20, tolerance=3):
     """
     Retorna False si existe algún semáforo en frente del vehículo cuyo estado sea ROJO.
-    Si el semáforo está en VERDE o ÁMBAR (YELLOW), el vehículo puede pasar.
-    Se basa en la posición del vehículo, su dirección y una distancia umbral.
+    Cuando el semáforo está en VERDE o ÁMBAR, el vehículo puede avanzar.
+    Se basa en la posición, dirección del vehículo y una distancia umbral.
     """
     x, y = vehicle.position
     for tl in traffic_lights:
-        # Solo se bloquea el avance si el semáforo está en ROJO.
         if tl.current_state == "RED":
             if vehicle.direction == "NORTE":
                 if abs(tl.x - x) <= tolerance and tl.y > y and (tl.y - y) <= threshold:
@@ -25,11 +24,13 @@ def can_vehicle_proceed(vehicle, traffic_lights, threshold=20, tolerance=3):
                     return False
     return True
 
-def reorient_vehicle(vehicle, intersections, tolerance=5):
+def reorient_vehicle(vehicle, intersections, tolerance=5, min_distance=2):
     """
-    Si el vehículo está muy cerca de una intersección (dentro de 'tolerance' unidades)
-    y está en movimiento, ajusta su dirección para seguir la carretera.
-    Se determina si la diferencia vertical u horizontal es mayor para orientar el vehículo.
+    Si el vehículo está cerca de una intersección (dentro de 'tolerance' unidades)
+    y se encuentra en movimiento, se reorienta para seguir la dirección predominante de la carretera.
+    Si la diferencia horizontal es mayor, se ajusta a ESTE u OESTE; si la vertical es mayor, a NORTE o SUR.
+    Esta reorientación se aplica solo si el vehículo está en movimiento y no está demasiado cerca (menos de min_distance)
+    para evitar oscilaciones.
     """
     if not vehicle.moving:
         return
@@ -37,15 +38,17 @@ def reorient_vehicle(vehicle, intersections, tolerance=5):
     x, y = vehicle.position
     for inter in intersections:
         ix, iy = inter.location
-        if abs(x - ix) <= tolerance and abs(y - iy) <= tolerance:
-            if abs(x - ix) < abs(y - iy):
-                # La diferencia vertical es mayor: orienta en dirección vertical.
+        dx = abs(x - ix)
+        dy = abs(y - iy)
+        if dx <= tolerance and dy <= tolerance:
+            if dx < min_distance and dy < min_distance:
+                continue
+            if dx < dy:
                 if iy > y:
                     vehicle.direction = "NORTE"
                 else:
                     vehicle.direction = "SUR"
             else:
-                # La diferencia horizontal es mayor: orienta en dirección horizontal.
                 if ix > x:
                     vehicle.direction = "ESTE"
                 else:
@@ -54,8 +57,8 @@ def reorient_vehicle(vehicle, intersections, tolerance=5):
 
 def bounce_vehicle(vehicle, width=800, height=600):
     """
-    Si el vehículo alcanza el límite del área (0,0)-(width, height),
-    se invierte su dirección (rebota) y se coloca justo en el borde.
+    Si el vehículo alcanza algún límite del área (0,0)-(width, height),
+    invierte su dirección (rebota) y lo coloca justo en el borde.
     """
     x, y = vehicle.position
     reversed_flag = False
@@ -79,12 +82,11 @@ def bounce_vehicle(vehicle, width=800, height=600):
 
 class Simulator:
     """
-    Clase encargada de orquestar la actualización de la ciudad.
-    Actualiza semáforos y vehículos:
-      - Un vehículo se mueve solo si no hay un semáforo ROJO en su camino.
-      - Si se encuentra frente a un semáforo en rojo, se detiene (moving = False).
-      - Cuando el semáforo cambie a verde o ámbar, el vehículo continúa sin reorientarse abruptamente.
-      - Se reorienta (si está en movimiento) según la cercanía a una intersección y se aplica la función de rebote.
+    Orquesta la actualización en tiempo real de la ciudad:
+      - Actualiza semáforos y vehículos.
+      - Un vehículo se mueve solo si puede proceder (es decir, si no hay semáforo ROJO de frente).
+      - Si un vehículo estaba detenido y ahora puede avanzar, se le aplica un pequeño empujón (delta) para que salga del área del semáforo.
+      - Luego, si procede, se reorienta según la red de intersecciones y se verifica el rebote en los límites.
     """
     def __init__(self, city):
         self.city = city
@@ -96,12 +98,25 @@ class Simulator:
 
         # Actualizar vehículos
         for v in self.city.vehicles:
-            if can_vehicle_proceed(v, self.city.traffic_lights):
+            allowed = can_vehicle_proceed(v, self.city.traffic_lights)
+            was_stopped = not v.moving
+            if allowed:
                 v.move()
                 v.moving = True
+                # Si el vehículo estaba detenido y ahora puede avanzar, se le aplica un pequeño impulso
+                if was_stopped:
+                    delta = 5
+                    if v.direction == "NORTE":
+                        v.position = (v.position[0], v.position[1] + delta)
+                    elif v.direction == "SUR":
+                        v.position = (v.position[0], v.position[1] - delta)
+                    elif v.direction == "ESTE":
+                        v.position = (v.position[0] + delta, v.position[1])
+                    elif v.direction == "OESTE":
+                        v.position = (v.position[0] - delta, v.position[1])
             else:
                 v.moving = False
-            # Solo reorienta si el vehículo sigue en movimiento
+            # Reorientar solo si el vehículo se está moviendo
             reorient_vehicle(v, self.city.intersections)
             bounce_vehicle(v, 800, 600)
 
