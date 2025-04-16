@@ -22,13 +22,17 @@ class City:
     def add_intersection(self, intersection):
         self.intersections.append(intersection)
 
-    async def run_simulation(self):
+    async def run_simulation(self, tick_interval=1.0, duration=10):
         """
-        Lanza las tareas de los semáforos de la ciudad.
+        Ejecuta una simulación durante una duración dada, actualizando el estado 
+        de cada semáforo en cada tick.
         """
         print(f"[{self.name}] Iniciando simulación con {len(self.traffic_lights)} semáforos...")
-        tareas = [tl.run() for tl in self.traffic_lights]
-        await asyncio.gather(*tareas)
+        ticks = int(duration / tick_interval)
+        for _ in range(ticks):
+            for tl in self.traffic_lights:
+                tl.update_state()
+            await asyncio.sleep(tick_interval)
 
     def get_state_summary(self):
         """
