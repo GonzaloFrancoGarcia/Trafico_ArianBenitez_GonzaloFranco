@@ -1,7 +1,5 @@
 # simulacion_trafico/entorno/traffic_light.py
 
-import asyncio
-
 class TrafficLight:
     """
     Clase que modela un semáforo con tiempos específicos para cada estado.
@@ -36,22 +34,6 @@ class TrafficLight:
     def _change_state(self, new_state):
         self.current_state = new_state
         self.timer = 0
-
-    async def run(self):
-        """
-        Ejecuta el ciclo del semáforo de forma indefinida usando asyncio.
-        """
-        while True:
-            print(f"[Semáforo {self.id_}] Estado actual: {self.current_state}")
-            if self.current_state == "GREEN":
-                await asyncio.sleep(self.green_time)
-                self._change_state("YELLOW")
-            elif self.current_state == "YELLOW":
-                await asyncio.sleep(self.yellow_time)
-                self._change_state("RED")
-            elif self.current_state == "RED":
-                await asyncio.sleep(self.red_time)
-                self._change_state("GREEN")
 
     @property
     def color(self):

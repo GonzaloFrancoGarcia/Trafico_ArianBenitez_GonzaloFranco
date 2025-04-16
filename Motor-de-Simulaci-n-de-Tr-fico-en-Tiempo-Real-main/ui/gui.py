@@ -12,6 +12,10 @@ FPS_COLOR = (200, 200, 200)
 
 CAMERA_SPEED = 5
 
+# Factor de escala (1.0 = sin escala).
+# Aumenta para "acercar" o reduce para "alejar" el mapa.
+SCALE = 1.0
+
 async def launch_gui(simulator):
     pygame.init()
     screen = pygame.display.set_mode((WIDTH, HEIGHT))
@@ -20,7 +24,9 @@ async def launch_gui(simulator):
     font = pygame.font.SysFont(None, 20)
 
     running = True
-    camera_offset = [0, 0]  # x, y
+
+    # Ajuste de la cámara para que (0,0) quede en el centro de la ventana
+    camera_offset = [-(WIDTH // 2), -(HEIGHT // 2)]
 
     while running:
         # Manejo de eventos
@@ -28,7 +34,7 @@ async def launch_gui(simulator):
             if event.type == pygame.QUIT:
                 running = False
 
-        # Movimiento de cámara
+        # Movimiento de cámara con WASD o flechas
         keys = pygame.key.get_pressed()
         if keys[pygame.K_LEFT] or keys[pygame.K_a]:
             camera_offset[0] += CAMERA_SPEED
@@ -48,8 +54,10 @@ async def launch_gui(simulator):
         # Dibujar semáforos
         for tl in snapshot.get("traffic_lights", []):
             try:
-                x = int(tl.get("x", 0) + camera_offset[0])
-                y = int(tl.get("y", 0) + camera_offset[1])
+                # Escalar y desplazar posiciones según offset
+                x = int(tl.get("x", 0) * SCALE + camera_offset[0])
+                y = int(tl.get("y", 0) * SCALE + camera_offset[1])
+
                 # Solo dibujar si el semáforo está dentro de la ventana
                 if 0 <= x <= WIDTH and 0 <= y <= HEIGHT:
                     estado = tl.get("estado", "RED").upper()
@@ -59,7 +67,7 @@ async def launch_gui(simulator):
                         color = (255, 255, 0)
                     else:
                         color = (255, 0, 0)
-                    
+
                     pygame.draw.circle(screen, color, (x, y), 15)
                     label = font.render(estado, True, FONT_COLOR)
                     screen.blit(label, (x - 20, y + 20))
@@ -70,8 +78,8 @@ async def launch_gui(simulator):
         # Dibujar vehículos
         for v in snapshot.get("vehicles", []):
             try:
-                x = int(v.get("x", 0) + camera_offset[0])
-                y = int(v.get("y", 0) + camera_offset[1])
+                x = int(v.get("x", 0) * SCALE + camera_offset[0])
+                y = int(v.get("y", 0) * SCALE + camera_offset[1])
                 if 0 <= x <= WIDTH and 0 <= y <= HEIGHT:
                     rect = pygame.Rect(x, y, 20, 10)
                     pygame.draw.rect(screen, VEHICLE_COLOR, rect)
@@ -79,7 +87,7 @@ async def launch_gui(simulator):
                 print("Error al renderizar vehículo:", e)
                 continue
 
-        # Mostrar estadísticas
+        # Mostrar estadísticas (número de vehículos y FPS)
         stats = f"Vehículos: {len(snapshot.get('vehicles', []))}"
         fps_text = f"FPS: {int(clock.get_fps())}"
         screen.blit(font.render(stats, True, FONT_COLOR), (10, 10))
@@ -87,8 +95,7 @@ async def launch_gui(simulator):
 
         # Actualizar pantalla y sincronizar el loop
         pygame.display.flip()
-        # Se cede el control al loop de asyncio para evitar bloqueos
-        await asyncio.sleep(0.001)
+        await asyncio.sleep(0.001)  # Cede el control al bucle asíncrono
         clock.tick(30)
 
     pygame.quit()
