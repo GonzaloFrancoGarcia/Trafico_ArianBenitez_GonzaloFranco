@@ -21,7 +21,7 @@ def random_vehicle_initial_position():
     if random.random() < 0.5:
         # Carretera horizontal: fila superior, media o inferior
         y = random.choice([100, 300, 400])
-        direction = random.choice(["ESTE", "OESTO"])
+        direction = random.choice(["ESTE", "OESTE"])
         x = random.uniform(100, 700)
     else:
         # Carretera vertical: columnas izquierdas o derechas
