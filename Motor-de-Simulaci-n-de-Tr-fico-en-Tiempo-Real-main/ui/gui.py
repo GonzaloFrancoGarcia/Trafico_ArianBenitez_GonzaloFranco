@@ -4,7 +4,7 @@ import asyncio
 import pygame
 import hashlib    # para generar colores a partir del id
 
-WIDTH, HEIGHT = 800, 600
+WIDTH, HEIGHT = 800, 800
 BACKGROUND_COLOR = (30, 30, 30)
 STOPPED_VEHICLE_COLOR = (200, 0, 0)
 ROAD_COLOR = (120, 120, 120)
@@ -64,7 +64,10 @@ async def launch_gui(simulator):
         for tl in snap["traffic_lights"]:
             x, y = int(tl["x"]), int(tl["y"])
             st = tl["estado"]
-            color = (255, 0, 0) if st == "RED" else (0, 255, 0)
+            if st == "RED": color = (255, 0, 0)
+            if st == "GREEN": color = (0, 255, 0)
+            if st == "YELLOW": color =(255, 255, 0)
+
             pygame.draw.circle(screen, color, (x, y), 15)
             screen.blit(font.render(st, True, FONT_COLOR), (x - 20, y + 20))
 
