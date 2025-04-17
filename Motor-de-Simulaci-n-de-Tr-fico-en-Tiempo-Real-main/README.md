@@ -10,7 +10,7 @@ Simulador urbano modular, visual y escalable para representar el tráfico en una
 simulacion_trafico/
 ├── main.py                          # Lanzador principal: grid de semáforos 3×4 y vehículos aleatorios
 ├── zona_runner.py                   # Simulación autónoma de una zona (sin GUI)
-├── README.md                        # Documentación del proyecto
+├── README.md                        # Documentación actualizada
 │
 ├── environment/                     # Entidades urbanas
 │   ├── __init__.py
@@ -23,11 +23,11 @@ simulacion_trafico/
 │
 ├── simulation/                      # Lógica de simulación
 │   ├── __init__.py
-│   └── simulator.py                 # Motor de simulación: update(), snapshot()
+│   └── simulator.py                 # Motor de simulación: update(), snapshot() con semáforos desfasados
 │
 ├── concurrency/                     # Concurrencia con asyncio
 │   ├── __init__.py
-│   └── tasks.py                     # Creación de tasks asíncronas para simulación continua
+│   └── tasks.py                     # (Opcional) Creación de tasks asíncronas para simulación continua
 │
 ├── ui/                              # Interfaz gráfica con Pygame
 │   ├── __init__.py
@@ -54,10 +54,15 @@ simulacion_trafico/
    pip install pygame aio-pika
    ```
 
-2. Ejecuta la simulación local completa (grid 3×4):
+2. Ejecuta la simulación local completa (grid 3×4 semáforos):
    ```bash
    python main.py
    ```
+
+   - La cuadrícula de semáforos está en tres filas horizontalmente (y = 100, 300, 500)
+     y cuatro columnas verticalmente (x = 100, 300, 500, 700).
+   - Los semáforos comienzan alternando estados iniciales (algunos en ROJO, otros en VERDE).
+   - Ciclo de semáforo: GREEN 3s → YELLOW 1s → RED 3s.
 
 3. Ejecuta una zona independiente (modo distribuido):
    ```bash
@@ -69,50 +74,43 @@ simulacion_trafico/
    python distribution/send_vehicle_to_zona_distribuida.py
    ```
 
-> ⚠️ Asegúrate de tener RabbitMQ ejecutándose en localhost antes de los modos distribuidos.
+> ⚠️ Asegúrate de tener RabbitMQ ejecutándose en localhost antes de usar los modos distribuidos.
 
 ---
 
 ## 🧱 Cómo funciona
 
-- **Grid de semáforos**: 3 filas horizontales (y = 100, 250, 400) y 4 columnas verticales (x = 100, 300, 500, 700).
-- **Intersecciones**: definidas en los mismos puntos que semáforos para dibujar carreteras.
-- **Vehículos**: se generan en posiciones aleatorias sobre cualquiera de las carreteras horizontales o verticales.
-- **Colores únicos**: cada vehículo obtiene un color RGB determinista basado en su `id`, sin afectar la simulación.
-- **Semáforos**: ROJO detiene el vehículo al contactar, VERDE/AMBAR dejan avanzar.
-- **Mantenimiento de carril**: tras cada tick, los vehículos se realinean al centro de su carretera evitando salirse.
-- **Giros opcionales**: en cada intersección pueden girar perpendicularmente con probabilidad configurada.
-- **Concurrencia**: asyncio gestiona el bucle de simulación y el GUI sin bloquear.
-- **Distribución**: microservicios en distintas zonas se comunican por RabbitMQ.
+- **Grid de semáforos**: 3 filas (y=100, 300, 500) × 4 columnas (x=100, 300, 500, 700).
+- **Estados iniciales alternos**: al iniciar, cada semáforo arranca en ROJO o VERDE según su índice.
+- **Ciclo de semáforo**: 3 s VERDE → 1 s AMARILLO → 3 s ROJO.
+- **Desfase escalonado**: semáforos cambian en orden de arriba a abajo y de izquierda a derecha,
+  con un offset de 10 frames (~0.17 s) entre cada uno.
+- **Vehículos**: generados aleatoriamente sobre cualquier carretera horizontal o vertical.
+- **Colores únicos**: cada vehículo recibe un color RGB derivado de su `id`.
+- **Lógica de movimiento**: los vehículos se detienen al contactar semáforos ROJOS,
+  se realinean al carril, rebotan en los extremos y pueden girar en intersecciones.
+- **Sincronización**: se usa `asyncio` junto con Pygame a 60 FPS para un movimiento fluido.
+- **Distribución**: microservicios de zonas comunican vehículos vía RabbitMQ.
 
 ---
 
-## 🛠️ ¿Cómo extenderlo?
+## 🛠️ Extensiones posibles
 
-1. **Colisiones y congestión**: detectar y manejar proximidad entre vehículos.
-2. **Controles en GUI**: agregar botones, sliders para densidad, tiempos de semáforo o zoom.
-3. **Mapas personalizados**: cargar posiciones de carreteras y semáforos desde un archivo JSON/CSV.
-4. **Escalabilidad**: desplegar microservicios en contenedores (Docker + Kubernetes).
-5. **Análisis de rendimiento**: integrar métricas en tiempo real con Prometheus/Grafana.
-6. **IA de tráfico**: implementar lógica de toma de decisiones, rutas óptimas y prioridades.
-
----
-
-## ⚡ Optimización aplicada
-
-- **Sincronización eficiente**: uso de `await asyncio.sleep(0)` y `clock.tick` para evitar stutter.
-- **Render selectivo**: dibujado de carreteras y elementos en posiciones relevantes.
-- **Datos estructurados**: snapshot en diccionarios en lugar de strings parseados.
-- **Colores deterministas**: hashing de `id` evita collisions y simplifica paleta.
+1. **Detección de colisiones**: prevenir choques entre vehículos.
+2. **Controles en GUI**: sliders para ajustar densidad de tráfico o tiempos de semáforo dinámicamente.
+3. **Mapas personalizados**: cargar carreteras y semáforos desde archivos de configuración.
+4. **Escalado**: desplegar microservicios en contenedores Docker + Kubernetes.
+5. **Métricas**: integrar Prometheus/Grafana para monitorizar rendimiento.
+6. **IA de tráfico**: rutas óptimas, prioridades y lógica avanzada de conducción.
 
 ---
 
 ## ✅ Estado actual
 
-- **Versión final**: grid 3×4 semáforos + fila intermedia, vehículos aleatorios, colores únicos.
-- **Concurrencia**: bucle de simulación + GUI en paralelo.
-- **Distribución**: microservicios con RabbitMQ listos para comunicación.
-- **Estabilidad**: vehículos respetan carriles, semáforos y límites de carretera.
+- **Versión final**: grid 3×4 con desfase, semáforos alternando, ciclo 3-1-3, vehículos fluidos.
+- **Concurrencia**: simulación y GUI en paralelo sin bloqueos.
+- **Distribución**: microservicios RabbitMQ listos.
+- **Estabilidad**: vehículos respetan carreteras, semáforos y límites.
 
 ---
 
