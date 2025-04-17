@@ -2,10 +2,10 @@
 
 import asyncio
 import pygame
+import hashlib    # para generar colores a partir del id
 
 WIDTH, HEIGHT = 800, 600
 BACKGROUND_COLOR = (30, 30, 30)
-VEHICLE_COLOR = (0, 150, 255)
 STOPPED_VEHICLE_COLOR = (200, 0, 0)
 ROAD_COLOR = (120, 120, 120)
 BOUND_COLOR = (255, 255, 255)
@@ -13,7 +13,6 @@ FONT_COLOR = (255, 255, 255)
 FPS_COLOR = (200, 200, 200)
 
 def draw_roads(screen, intersections, tol=10):
-    # Dibuja carreteras horizontales y verticales según intersecciones
     if not intersections:
         return
     horiz, vert = {}, {}
@@ -30,6 +29,15 @@ def draw_roads(screen, intersections, tol=10):
         if len(grp) >= 2:
             ys = sorted(i["y"] for i in grp)
             pygame.draw.line(screen, ROAD_COLOR, (x, ys[0]), (x, ys[-1]), 5)
+
+def vehicle_color_from_id(id_str: str):
+    """
+    Genera un color RGB (tuple) a partir del hash MD5 del id del vehículo.
+    Siempre sale el mismo color para un mismo id, pero distintos ids dan colores distintos.
+    """
+    h = hashlib.md5(id_str.encode()).digest()
+    # Tomamos los tres primeros bytes para R, G, B
+    return (h[0], h[1], h[2])
 
 async def launch_gui(simulator):
     pygame.init()
@@ -48,9 +56,11 @@ async def launch_gui(simulator):
         pygame.draw.rect(screen, BOUND_COLOR, (0, 0, WIDTH, HEIGHT), 2)
 
         snap = simulator.get_snapshot()
+
+        # Carreteras
         draw_roads(screen, snap["intersections"])
 
-        # Dibujar semáforos
+        # Semáforos
         for tl in snap["traffic_lights"]:
             x, y = int(tl["x"]), int(tl["y"])
             st = tl["estado"]
@@ -58,11 +68,14 @@ async def launch_gui(simulator):
             pygame.draw.circle(screen, color, (x, y), 15)
             screen.blit(font.render(st, True, FONT_COLOR), (x - 20, y + 20))
 
-        # Dibujar vehículos
+        # Vehículos (cada uno con su color único)
         for v in snap["vehicles"]:
             x, y = v["x"], v["y"]
-            mv = v.get("moving", True)
-            color = VEHICLE_COLOR if mv else STOPPED_VEHICLE_COLOR
+            moving = v.get("moving", True)
+            # color basado en su id
+            base_color = vehicle_color_from_id(v["id"])
+            color = base_color if moving else STOPPED_VEHICLE_COLOR
+            # orientación del rectángulo
             if v["direction"] in ("NORTE", "SUR"):
                 w, h = 15, 30
             else:
