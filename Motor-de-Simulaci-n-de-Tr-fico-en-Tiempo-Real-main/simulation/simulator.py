@@ -2,127 +2,134 @@
 
 import random
 
-def can_vehicle_proceed(vehicle, traffic_lights, lane_tol=5):
+def can_vehicle_proceed(vehicle, traffic_lights, tol=5):
     """
-    Devuelve False solo si un semáforo ROJO se interpone entre la posición actual
-    y la siguiente (pos + speed), dentro de la tolerancia perpendicular 'lane_tol'.
-    Semáforos en VERDE o AMARILLO dejan pasar.
+    Bloquea solo si la siguiente posición del vehículo (pos + speed)
+    queda dentro de 'tol' píxeles de un semáforo en ROJO.
+    Verde y ÁMBAR dejan pasar.
     """
     x, y = vehicle.position
     s = vehicle.speed
-    # Cálculo de la siguiente posición
+
     if vehicle.direction == "ESTE":
-        next_x, next_y = x + s, y
-    elif vehicle.direction == "OESTO":
-        next_x, next_y = x - s, y
+        nx, ny = x + s, y
+    elif vehicle.direction == "OESTE":
+        nx, ny = x - s, y
     elif vehicle.direction == "NORTE":
-        next_x, next_y = x, y + s
+        nx, ny = x, y + s
     else:  # SUR
-        next_x, next_y = x, y - s
+        nx, ny = x, y - s
 
     for tl in traffic_lights:
         if tl.current_state != "RED":
-            continue  # verde o amarillo no bloquean
-        # Comprobar intersección del segmento (x,y)->(next_x,next_y) con la posición del semáforo
-        if vehicle.direction in ("ESTE", "OESTO"):
-            if min(x, next_x) <= tl.x <= max(x, next_x) and abs(tl.y - y) <= lane_tol:
-                return False
-        else:
-            if min(y, next_y) <= tl.y <= max(y, next_y) and abs(tl.x - x) <= lane_tol:
-                return False
+            continue
+        if abs(nx - tl.x) <= tol and abs(ny - tl.y) <= tol:
+            return False
     return True
 
 def align_to_road(vehicle, h_roads, v_roads):
     """
-    Recuerda centrar al vehículo sobre su carretera:
-    - Si va ESTE/OESTE, fija su y en la horizontal más cercana.
-    - Si va NORTE/SUR, fija su x en la vertical más cercana.
+    Centra al vehículo en el eje de su carretera:
+    - Si va ESTE/OESTO, fija su y
+    - Si va NORTE/SUR, fija su x
     """
     x, y = vehicle.position
-    if vehicle.direction in ("ESTE", "OESTO"):
+    if vehicle.direction in ("ESTE", "OESTE"):
         y = min(h_roads, key=lambda ry: abs(ry - y))
     else:
         x = min(v_roads, key=lambda rx: abs(rx - x))
     vehicle.position = (x, y)
 
-def clamp_and_bounce_on_road(vehicle, h_extents, v_extents):
+def clamp_and_bounce_on_road(vehicle, h_ext, v_ext):
     """
-    Evita que el vehículo salga de los extremos de su propia carretera:
-    - Para carreteras horizontales (y fijo), mantiene x en [min_x, max_x].
-    - Para verticales (x fijo), mantiene y en [min_y, max_y].
-    Y si toca un extremo, invierte su dirección.
+    Impide que el vehículo salga de los límites de su propia carretera,
+    rebota e invierte dirección al tocar un borde.
     """
     x, y = vehicle.position
-    dir0 = vehicle.direction
-
-    if dir0 in ("ESTE", "OESTO"):
-        # Carretera horizontal
-        road_y = y
-        min_x, max_x = h_extents[road_y]
-        if x < min_x:
-            x, vehicle.direction = min_x, "ESTE"
-        elif x > max_x:
-            x, vehicle.direction = max_x, "OESTO"
+    d = vehicle.direction
+    if d in ("ESTE", "OESTE"):
+        mn, mx = h_ext[y]
+        if x < mn:
+            x, vehicle.direction = mn, "ESTE"
+        elif x > mx:
+            x, vehicle.direction = mx, "OESTE"
     else:
-        # Carretera vertical
-        road_x = x
-        min_y, max_y = v_extents[road_x]
-        if y < min_y:
-            y, vehicle.direction = min_y, "NORTE"
-        elif y > max_y:
-            y, vehicle.direction = max_y, "SUR"
-
+        mn, mx = v_ext[x]
+        if y < mn:
+            y, vehicle.direction = mn, "NORTE"
+        elif y > mx:
+            y, vehicle.direction = mx, "SUR"
     vehicle.position = (x, y)
 
-def reorient_vehicle(vehicle, intersections, tol=5, turn_prob=0.3):
+def reorient_vehicle(vehicle, intersections, tol=5, prob=0.3):
     """
-    En intersecciones y si el vehículo sigue moviéndose, gira perpendicularmente
-    con probabilidad 'turn_prob'; si no, sigue recto.
+    En intersecciones, si el vehículo está en movimiento,
+    gira con probabilidad 'prob' perpendicularmente.
     """
     if not vehicle.moving:
         return
-
     x, y = vehicle.position
     for inter in intersections:
         ix, iy = inter.location
         if abs(x - ix) <= tol and abs(y - iy) <= tol:
-            if vehicle.direction in ("ESTE", "OESTO"):
+            if vehicle.direction in ("ESTE", "OESTE"):
                 opts = ["NORTE", "SUR"]
             else:
-                opts = ["ESTE", "OESTO"]
-            if random.random() < turn_prob:
+                opts = ["ESTE", "OESTE"]
+            if random.random() < prob:
                 vehicle.direction = random.choice(opts)
             break
 
 class Simulator:
     """
-    Orquesta la simulación de semáforos y vehículos en tiempo real.
+    Orquesta la simulación con semáforos desfasados en escalera:
+    - update_interval = 120 frames (~2s a 60 FPS)
+    - Offset fijo de 10 frames entre semáforo y semáforo,
+      en orden de arriba a abajo, izquierda a derecha.
     """
     def __init__(self, city):
         self.city = city
         coords = [ix.location for ix in city.intersections]
 
-        # Conjuntos de carreteras
-        self.h_roads = sorted({y for x, y in coords})
-        self.v_roads = sorted({x for x, y in coords})
+        # Carreteras horizontales y verticales
+        self.h_roads = sorted({y for _, y in coords})
+        self.v_roads = sorted({x for x, _ in coords})
 
-        # Extents para cada carretera
-        self.h_extents = {}
-        for y in self.h_roads:
-            xs = [x for x, yy in coords if yy == y]
-            self.h_extents[y] = (min(xs), max(xs))
+        # Límites de cada carretera
+        self.h_ext = {
+            y: (min(x for x, yy in coords if yy == y),
+                max(x for x, yy in coords if yy == y))
+            for y in self.h_roads
+        }
+        self.v_ext = {
+            x: (min(y for xx, y in coords if xx == x),
+                max(y for xx, y in coords if xx == x))
+            for x in self.v_roads
+        }
 
-        self.v_extents = {}
-        for x in self.v_roads:
-            ys = [y for xx, y in coords if xx == x]
-            self.v_extents[x] = (min(ys), max(ys))
+        # Cada semáforo cambia cada 120 frames (~2s)
+        self.update_interval = 120
+
+        # Ordenamos semáforos: fila (y) ascendente, luego columna (x) ascendente
+        sorted_tls = sorted(city.traffic_lights, key=lambda tl: (tl.y, tl.x))
+
+        # Offset de 10 frames entre cada semáforo
+        self.tl_offsets = {
+            tl: idx * 10
+            for idx, tl in enumerate(sorted_tls)
+        }
+
+        self.frame_count = 0
 
     def update(self):
-        # 1) Actualizar todos los semáforos
-        for tl in self.city.traffic_lights:
-            tl.update_state()
+        self.frame_count += 1
 
-        # 2) Actualizar cada vehículo
+        # Actualizar semáforos según su offset y el intervalo
+        for tl, offset in self.tl_offsets.items():
+            if (self.frame_count - offset) % self.update_interval == 0:
+                tl.update_state()
+
+        # Actualizar vehículos cada frame
         for v in self.city.vehicles:
             if can_vehicle_proceed(v, self.city.traffic_lights):
                 v.move()
@@ -130,9 +137,8 @@ class Simulator:
             else:
                 v.moving = False
 
-            # Mantener siempre en carretera
             align_to_road(v, self.h_roads, self.v_roads)
-            clamp_and_bounce_on_road(v, self.h_extents, self.v_extents)
+            clamp_and_bounce_on_road(v, self.h_ext, self.v_ext)
             reorient_vehicle(v, self.city.intersections)
 
     def get_snapshot(self):
