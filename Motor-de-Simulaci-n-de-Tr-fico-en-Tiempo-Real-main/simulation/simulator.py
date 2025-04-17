@@ -13,7 +13,7 @@ def can_vehicle_proceed(vehicle, traffic_lights, tol=5):
 
     if vehicle.direction == "ESTE":
         nx, ny = x + s, y
-    elif vehicle.direction == "OESTO":
+    elif vehicle.direction == "OESTE":
         nx, ny = x - s, y
     elif vehicle.direction == "NORTE":
         nx, ny = x, y + s
@@ -34,7 +34,7 @@ def align_to_road(vehicle, h_roads, v_roads):
     - Si va NORTE/SUR, fija su x
     """
     x, y = vehicle.position
-    if vehicle.direction in ("ESTE", "OESTO"):
+    if vehicle.direction in ("ESTE", "OESTE"):
         y = min(h_roads, key=lambda ry: abs(ry - y))
     else:
         x = min(v_roads, key=lambda rx: abs(rx - x))
@@ -47,12 +47,12 @@ def clamp_and_bounce_on_road(vehicle, h_ext, v_ext):
     """
     x, y = vehicle.position
     d = vehicle.direction
-    if d in ("ESTE", "OESTO"):
+    if d in ("ESTE", "OESTE"):
         mn, mx = h_ext[y]
         if x < mn:
             x, vehicle.direction = mn, "ESTE"
         elif x > mx:
-            x, vehicle.direction = mx, "OESTO"
+            x, vehicle.direction = mx, "OESTE"
     else:
         mn, mx = v_ext[x]
         if y < mn:
@@ -72,10 +72,10 @@ def reorient_vehicle(vehicle, intersections, tol=5, prob=0.3):
     for inter in intersections:
         ix, iy = inter.location
         if abs(x - ix) <= tol and abs(y - iy) <= tol:
-            if vehicle.direction in ("ESTE", "OESTO"):
+            if vehicle.direction in ("ESTE", "OESTE"):
                 opts = ["NORTE", "SUR"]
             else:
-                opts = ["ESTE", "OESTO"]
+                opts = ["ESTE", "OESTE"]
             if random.random() < prob:
                 vehicle.direction = random.choice(opts)
             break

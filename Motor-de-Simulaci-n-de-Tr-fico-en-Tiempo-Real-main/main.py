@@ -17,7 +17,7 @@ def random_vehicle_initial_position():
     """
     if random.random() < 0.5:
         y = random.choice([100, 300, 500])
-        direction = random.choice(["ESTE", "OESTO"])
+        direction = random.choice(["ESTE", "OESTE"])
         x = random.uniform(100, 700)
     else:
         x = random.choice([100, 300, 500, 700])

@@ -20,7 +20,7 @@ class Vehicle:
             y -= self.speed
         elif self.direction == "ESTE":
             x += self.speed
-        elif self.direction == "OESTO":
+        elif self.direction == "OESTE":
             x -= self.speed
         self.position = (x, y)
 
