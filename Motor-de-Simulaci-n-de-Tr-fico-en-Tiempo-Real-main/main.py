@@ -16,7 +16,12 @@ def random_vehicle_initial_position():
     - Vertical:   x ∈ {100, 300, 500, 700}, y ∈ [100,400], dir NORTE/SUR
     """
     if random.random() < 0.5:
+
         y = random.choice([100, 300, 500])
+
+        # Carretera horizontal: fila superior, media o inferior
+        y = random.choice([100, 300, 00])
+
         direction = random.choice(["ESTE", "OESTE"])
         x = random.uniform(100, 700)
     else:
