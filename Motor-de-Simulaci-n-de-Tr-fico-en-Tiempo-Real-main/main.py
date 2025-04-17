@@ -25,9 +25,9 @@ def random_vehicle_initial_position():
         else:
             y = 400
             direction = random.choice(["ESTE", "OESTE"])
-        x = random.uniform(100, 500)
+        x = random.uniform(100, 700)
     else:  # carretera vertical
-        x = random.choice([100, 300, 500])
+        x = random.choice([100, 300, 500, 700])
         direction = random.choice(["NORTE", "SUR"])
         y = random.uniform(100, 400)
     return (x, y), direction
@@ -39,9 +39,13 @@ async def main():
     tl1 = TrafficLight(id_="T1", x=100, y=100, green_time=10, yellow_time=3, red_time=10)
     tl2 = TrafficLight(id_="T2", x=300, y=100, green_time=10, yellow_time=3, red_time=10)
     tl3 = TrafficLight(id_="T3", x=500, y=100, green_time=10, yellow_time=3, red_time=10)
-    tl4 = TrafficLight(id_="T4", x=100, y=400, green_time=10, yellow_time=3, red_time=10)
-    tl5 = TrafficLight(id_="T5", x=500, y=400, green_time=10, yellow_time=3, red_time=10)
-    tl6 = TrafficLight(id_="T6", x=300, y=400, green_time=10, yellow_time=3, red_time=10)  # Semáforo del medio abajo
+    tl4 = TrafficLight(id_="T4", x=700, y=100, green_time=10, yellow_time=3, red_time=10)
+    tl5 = TrafficLight(id_="T5", x=100, y=400, green_time=10, yellow_time=3, red_time=10)
+    tl6 = TrafficLight(id_="T6", x=300, y=400, green_time=10, yellow_time=3, red_time=10)
+    tl7 = TrafficLight(id_="T7", x=500, y=400, green_time=10, yellow_time=3, red_time=10)
+    tl8 = TrafficLight(id_="T8", x=700, y=400, green_time=10, yellow_time=3, red_time=10)
+
+
 
     city.add_traffic_light(tl1)
     city.add_traffic_light(tl2)
@@ -49,14 +53,19 @@ async def main():
     city.add_traffic_light(tl4)
     city.add_traffic_light(tl5)
     city.add_traffic_light(tl6)
+    city.add_traffic_light(tl7)
+    city.add_traffic_light(tl8)
+
     
     # Crear intersecciones para formar un grid (carreteras fijas)
     inter1 = Intersection(id_="I1", location=(100, 100))
     inter2 = Intersection(id_="I2", location=(300, 100))
     inter3 = Intersection(id_="I3", location=(500, 100))
-    inter4 = Intersection(id_="I4", location=(100, 400))
-    inter5 = Intersection(id_="I5", location=(300, 400))
-    inter6 = Intersection(id_="I6", location=(500, 400))
+    inter4 = Intersection(id_="I4", location=(700, 100))
+    inter5 = Intersection(id_="I5", location=(100, 400))
+    inter6 = Intersection(id_="I6", location=(300, 400))
+    inter7 = Intersection(id_="I7", location=(500, 400))
+    inter8 = Intersection(id_="I8", location=(700, 400))
     
     city.add_intersection(inter1)
     city.add_intersection(inter2)
@@ -64,6 +73,8 @@ async def main():
     city.add_intersection(inter4)
     city.add_intersection(inter5)
     city.add_intersection(inter6)
+    city.add_intersection(inter7)
+    city.add_intersection(inter8)
     
     # Crear vehículos con posiciones iniciales aleatorias sobre las carreteras
     vehicles = []
