@@ -1,0 +1,67 @@
+{
+  "id": null,
+  "uid": "traffic-dist",
+  "title": "Simulación de Tráfico Distribuido",
+  "timezone": "browser",
+  "schemaVersion": 38,
+  "version": 1,
+  "refresh": "5s",
+  "panels": [
+    {
+      "type": "barchart",
+      "title": "Vehículos por Nodo",
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "vehiculos_nodo",
+          "legendFormat": "{{zona}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        }
+      },
+      "options": {
+        "orientation": "vertical"
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 }
+    },
+    {
+      "type": "stat",
+      "title": "Nodos HEALTHY",
+      "datasource": "Prometheus",
+      "targets": [
+        { "expr": "nodos_healthy" }
+      ],
+      "gridPos": { "h": 4, "w": 4, "x": 12, "y": 0 }
+    },
+    {
+      "type": "stat",
+      "title": "Nodos OVERLOADED",
+      "datasource": "Prometheus",
+      "targets": [
+        { "expr": "nodos_overloaded" }
+      ],
+      "gridPos": { "h": 4, "w": 4, "x": 16, "y": 0 }
+    },
+    {
+      "type": "stat",
+      "title": "Nodos UNHEALTHY",
+      "datasource": "Prometheus",
+      "targets": [
+        { "expr": "nodos_unhealthy" }
+      ],
+      "gridPos": { "h": 4, "w": 4, "x": 20, "y": 0 }
+    },
+    {
+      "type": "timeseries",
+      "title": "Heart-beats por segundo",
+      "datasource": "Prometheus",
+      "targets": [
+        { "expr": "rate(heartbeats_total[1m])", "legendFormat": "HB/s" }
+      ],
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 8 }
+    }
+  ]
+}
