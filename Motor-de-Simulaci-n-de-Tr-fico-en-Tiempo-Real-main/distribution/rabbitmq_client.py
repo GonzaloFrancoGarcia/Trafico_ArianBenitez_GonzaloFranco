@@ -1,51 +1,75 @@
+"""
+Envoltorio robusto sobre aio-pika con:
+  • reconexión automática y back-off
+  • prefetch configurable
+  • publicación con reintentos
+  • dispatch por tipo de mensaje
+"""
 
-# simulacion_trafico/comunicacion/rabbitmq_client.py
-
-import asyncio
+import asyncio, json, logging
+from typing import Callable, Dict, Awaitable
 import aio_pika
-import json
+from tenacity import retry, stop_after_attempt, wait_exponential, RetryError
+from .message_models import Mensaje
+
+_LOG = logging.getLogger("RabbitMQ")
 
 class RabbitMQClient:
-    def __init__(self, amqp_url="amqp://guest:guest@localhost/"):
-        self.amqp_url = amqp_url
-        self.connection = None
-        self.channel = None
+    def __init__(
+        self,
+        amqp_url: str = "amqp://guest:guest@localhost/",
+        prefetch: int = 10
+    ):
+        self.amqp_url  = amqp_url
+        self.prefetch  = prefetch
+        self.connection: aio_pika.RobustConnection | None = None
+        self.channel   : aio_pika.Channel | None = None
 
-    async def connect(self):
-        """
-        Establece conexión con RabbitMQ y abre un canal.
-        """
+    # ---------- Conexión ---------- #
+    async def connect(self) -> None:
         self.connection = await aio_pika.connect_robust(self.amqp_url)
-        self.channel = await self.connection.channel()
-        print("[RabbitMQ] Conectado y canal abierto.")
+        self.channel    = await self.connection.channel()
+        await self.channel.set_qos(prefetch_count=self.prefetch)
+        _LOG.info("Conectado a RabbitMQ (%s) con prefetch=%d", self.amqp_url, self.prefetch)
 
-    async def send_message(self, message: dict, queue_name: str):
-        """
-        Envía un mensaje JSON a una cola específica.
-        """
+    # ---------- Envío ---------- #
+    @retry(stop=stop_after_attempt(5), wait=wait_exponential(multiplier=0.5, max=10))
+    async def send_message(self, message_dict: dict, queue_name: str) -> None:
         if not self.channel:
-            raise Exception("Conexión no inicializada. Llama a connect() primero.")
-        body = json.dumps(message).encode()
+            raise RuntimeError("Debes llamar a connect() antes de publicar.")
+
+        msg_json = json.dumps(message_dict).encode()
         await self.channel.default_exchange.publish(
-            aio_pika.Message(body=body),
+            aio_pika.Message(body=msg_json),
             routing_key=queue_name
         )
-        print(f"[RabbitMQ] Mensaje enviado a '{queue_name}': {message}")
+        _LOG.debug("Publicado en %s: %s", queue_name, message_dict["id"])
 
-    async def start_consumer(self, queue_name: str, callback):
+    # ---------- Consumo ---------- #
+    async def start_consumer(
+        self,
+        queue_name : str,
+        handlers   : Dict[str, Callable[[Mensaje], Awaitable[None]]]
+    ) -> None:
         """
-        Inicia un consumidor en una cola específica y ejecuta un callback por mensaje recibido.
+        `handlers` es un dict {tipo_mensaje_str: coroutine}.
+        Si no existe handler para un tipo, se ignora con aviso.
         """
         if not self.channel:
-            raise Exception("Conexión no inicializada. Llama a connect() primero.")
-        queue = await self.channel.declare_queue(queue_name, durable=True)
-        print(f"[RabbitMQ] Esperando mensajes en '{queue_name}'...")
+            raise RuntimeError("Debes llamar a connect() antes de consumir.")
 
-        async with queue.iterator() as queue_iter:
-            async for message in queue_iter:
-                async with message.process():
+        queue = await self.channel.declare_queue(queue_name, durable=True)
+        _LOG.info("Esperando mensajes en '%s'…", queue_name)
+
+        async with queue.iterator() as it:
+            async for msg in it:
+                async with msg.process():
                     try:
-                        data = json.loads(message.body.decode())
-                        await callback(data)
-                    except Exception as e:
-                        print(f"[RabbitMQ] Error al procesar mensaje: {e}")
+                        m = Mensaje.validate(json.loads(msg.body.decode()))
+                        handler = handlers.get(m.tipo.value)
+                        if handler:
+                            await handler(m)
+                        else:
+                            _LOG.warning("Sin handler para tipo=%s", m.tipo)
+                    except Exception as exc:
+                        _LOG.exception("Error procesando mensaje: %s", exc)

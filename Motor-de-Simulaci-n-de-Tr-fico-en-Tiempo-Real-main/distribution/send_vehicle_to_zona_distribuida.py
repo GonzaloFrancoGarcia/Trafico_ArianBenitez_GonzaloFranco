@@ -1,32 +1,26 @@
-
-# send_vehicle_to_zona_distribuida.py
-
 import asyncio
 from distribution.rabbitmq_client import RabbitMQClient
-from distribution.protocolo import crear_mensaje, TipoMensaje
+from distribution.protocolo import mensaje_vehiculo_entrante
 
 async def main():
-    # Crear cliente RabbitMQ
     rabbit = RabbitMQClient()
     await rabbit.connect()
 
-    # Crear mensaje VEHICULO_ENTRANTE
     vehiculo = {
         "id": "VC-TEST",
-        "posicion": [20, 5],
+        "posicion": [20.0, 5.0],
         "velocidad": 1.2,
         "direccion": "ESTE"
     }
 
-    mensaje = crear_mensaje(
-        tipo=TipoMensaje.VEHICULO_ENTRANTE,
-        datos=vehiculo,
+    msg = mensaje_vehiculo_entrante(
+        vehiculo=vehiculo,
         origen="zona_central",
         destino="zona_distribuida"
     )
 
-    # Enviar a la cola de zona_distribuida
-    await rabbit.send_message(mensaje, queue_name="zona_distribuida_queue")
+    await rabbit.send_message(msg, queue_name="zona_distribuida_queue")
+    print("Mensaje de migración enviado.")
 
 if __name__ == "__main__":
     asyncio.run(main())

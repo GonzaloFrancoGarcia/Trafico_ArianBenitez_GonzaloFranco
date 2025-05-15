@@ -1,0 +1,36 @@
+{
+  "zones": [
+    {
+      "name": "norte",
+      "xmin": 0,
+      "xmax": 350,
+      "ymin": 0,
+      "ymax": 300,
+      "queue": "zona_norte_queue"
+    },
+    {
+      "name": "sur",
+      "xmin": 0,
+      "xmax": 350,
+      "ymin": 300,
+      "ymax": 600,
+      "queue": "zona_sur_queue"
+    },
+    {
+      "name": "este",
+      "xmin": 350,
+      "xmax": 800,
+      "ymin": 0,
+      "ymax": 300,
+      "queue": "zona_este_queue"
+    },
+    {
+      "name": "oeste",
+      "xmin": 350,
+      "xmax": 800,
+      "ymin": 300,
+      "ymax": 600,
+      "queue": "zona_oeste_queue"
+    }
+  ]
+}
