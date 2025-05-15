@@ -1,42 +1,45 @@
-
-# simulacion_trafico/comunicacion/protocolo.py
-
 """
-Define los formatos de mensaje usados entre zonas distribuidas.
+Funciones utilitarias para construir mensajes validados.
 """
 
-from enum import Enum
 import uuid
 from datetime import datetime
+from .message_models import Mensaje, TipoMensaje, DatosVehiculoEntrante, DatosEstadoZona, DatosAck
 
-class TipoMensaje(str, Enum):
-    VEHICULO_ENTRANTE = "VEHICULO_ENTRANTE"
-    ESTADO_ZONA = "ESTADO_ZONA"
-    ALIANZA = "ALIANZA"
-    ACTUALIZACION_SEMAFORO = "ACTUALIZACION_SEMAFORO"
-    ACK = "ACK"
+def crear_id() -> str:
+    return str(uuid.uuid4())
 
-def crear_mensaje(tipo: TipoMensaje, datos: dict, origen: str = "zona_x", destino: str = "zona_y") -> dict:
-    return {
-        "id": str(uuid.uuid4()),
-        "timestamp": datetime.utcnow().isoformat(),
-        "tipo": tipo.value,
-        "origen": origen,
-        "destino": destino,
-        "datos": datos
-    }
+def ahora_utc() -> datetime:
+    return datetime.utcnow()
 
-# Ejemplo de datos para VEHICULO_ENTRANTE
-# {
-#     "id": "V42",
-#     "posicion": [10, 0],
-#     "velocidad": 1.5,
-#     "direccion": "ESTE"
-# }
+# ---- Fábricas específicas ---- #
 
-# Ejemplo de datos para ESTADO_ZONA
-# {
-#     "zona": "zona_este",
-#     "vehiculos": 8,
-#     "trafico": "ALTO"
-# }
+def mensaje_vehiculo_entrante(*, vehiculo: dict, origen: str, destino: str) -> dict:
+    return Mensaje(
+        id=crear_id(),
+        timestamp=ahora_utc(),
+        tipo=TipoMensaje.VEHICULO_ENTRANTE,
+        origen=origen,
+        destino=destino,
+        datos=DatosVehiculoEntrante(**vehiculo).dict()
+    ).dict()
+
+def mensaje_estado_zona(*, estado: dict, origen: str, destino: str) -> dict:
+    return Mensaje(
+        id=crear_id(),
+        timestamp=ahora_utc(),
+        tipo=TipoMensaje.ESTADO_ZONA,
+        origen=origen,
+        destino=destino,
+        datos=DatosEstadoZona(**estado).dict()
+    ).dict()
+
+def mensaje_ack(*, acked_id: str, origen: str, destino: str) -> dict:
+    return Mensaje(
+        id=crear_id(),
+        timestamp=ahora_utc(),
+        tipo=TipoMensaje.ACK,
+        origen=origen,
+        destino=destino,
+        datos=DatosAck(acked_id=acked_id).dict()
+    ).dict()

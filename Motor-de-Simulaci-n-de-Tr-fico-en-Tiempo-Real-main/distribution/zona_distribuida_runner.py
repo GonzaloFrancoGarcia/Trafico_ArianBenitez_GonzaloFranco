@@ -1,7 +1,5 @@
-
-# simulacion_trafico/simulation/zona_distribuida_runner.py
-
-import asyncio
+import asyncio, logging
+from datetime import datetime
 
 from environment.City import City
 from environment.Vehicle import Vehicle
@@ -9,60 +7,81 @@ from environment.TrafficLight import TrafficLight
 from simulation.simulator import Simulator
 from concurrency.tasks import run_simulation_tasks
 from distribution.rabbitmq_client import RabbitMQClient
-from distribution.protocolo import crear_mensaje, TipoMensaje
+from distribution.protocolo import (
+    mensaje_estado_zona,
+    mensaje_ack
+)
+from distribution.message_models import Mensaje, TipoMensaje
 
+_LOG = logging.getLogger("ZonaDistribuida")
 
-async def procesar_mensaje(msg):
-    print(f"[ZONA] Mensaje recibido: {msg}")
-    if msg["tipo"] == TipoMensaje.VEHICULO_ENTRANTE.value:
-        datos = msg["datos"]
-        vehiculo = Vehicle(
-            id_=datos["id"],
-            position=tuple(datos["posicion"]),
-            speed=datos["velocidad"],
-            direction=datos["direccion"]
-        )
-        ciudad.add_vehicle(vehiculo)
-        print(f"[ZONA] Vehículo {vehiculo.id_} agregado a la zona")
+# ---------- Handlers de mensajes ---------- #
 
+async def handle_vehiculo_entrante(m: Mensaje):
+    datos = m.datos  # ya es DatosVehiculoEntrante validado
+    v = Vehicle(
+        id_=datos.id,
+        position=tuple(datos.posicion),
+        speed=datos.velocidad,
+        direction=datos.direccion
+    )
+    ciudad.add_vehicle(v)
+    _LOG.info("Vehículo %s integrado en la zona.", v.id_)
 
+    # publicar ACK de recepción
+    ack = mensaje_ack(
+        acked_id=m.id,
+        origen=ciudad.name,
+        destino=m.origen
+    )
+    await rabbit.send_message(ack, queue_name=f"{m.origen}_queue")
+
+# mapping tipo → handler
+HANDLERS = {
+    TipoMensaje.VEHICULO_ENTRANTE.value: handle_vehiculo_entrante,
+}
+
+# ---------- Arranque ---------- #
 async def main():
-    global ciudad
-    ciudad = City(name="ZonaDistribuida")
+    global ciudad, rabbit
+    ciudad = City(name="zona_distribuida")
+    rabbit  = RabbitMQClient(prefetch=5)   # evita bursts
 
-    # Crear semáforos y vehículos de esta zona
-    ciudad.add_traffic_light(TrafficLight(id_="ZD-T1", green_time=3, yellow_time=1, red_time=3))
-    ciudad.add_vehicle(Vehicle(id_="ZD-V1", position=(0, 0), speed=1.0, direction="SUR"))
+    # elementos locales
+    ciudad.add_traffic_light(TrafficLight(id_="ZD-T1",
+                                          green_time=3, yellow_time=1, red_time=3))
+    ciudad.add_vehicle(Vehicle(id_="ZD-V1", position=(0, 0),
+                               speed=1.0, direction="SUR"))
 
-    # Iniciar simulador local
-    simulador = Simulator(city=ciudad)
-    tasks_simulacion = run_simulation_tasks(simulador, update_interval=0.5)
+    # simulación local
+    sim = Simulator(city=ciudad)
+    sim_tasks = run_simulation_tasks(sim, update_interval=0.5)
 
-    # Conexión a RabbitMQ
-    rabbit = RabbitMQClient()
     await rabbit.connect()
 
-    # Lanzar consumidor de mensajes
-    consumer_task = asyncio.create_task(
-        rabbit.start_consumer(queue_name="zona_distribuida_queue", callback=procesar_mensaje)
+    # consumidor de cola propia
+    consumer = asyncio.create_task(
+        rabbit.start_consumer("zona_distribuida_queue", HANDLERS)
     )
 
-    # Enviar mensaje de estado de zona como demostración
-    estado = {
-        "zona": ciudad.name,
-        "vehiculos": len(ciudad.vehicles),
-        "trafico": "MODERADO"
-    }
-    mensaje = crear_mensaje(
-        tipo=TipoMensaje.ESTADO_ZONA,
-        datos=estado,
-        origen="zona_distribuida",
-        destino="zona_central"
-    )
-    await rabbit.send_message(mensaje, queue_name="zona_central_queue")
+    # informe periódico de estado (cada 5 s)
+    async def publicar_estado():
+        while True:
+            estado = {
+                "zona": ciudad.name,
+                "vehiculos": len(ciudad.vehicles),
+                "trafico": "MODERADO"
+            }
+            msg = mensaje_estado_zona(
+                estado=estado,
+                origen=ciudad.name,
+                destino="zona_central"
+            )
+            await rabbit.send_message(msg, queue_name="zona_central_queue")
+            await asyncio.sleep(5)
 
-    # Ejecutar simulación + consumidor
-    await asyncio.gather(*tasks_simulacion, consumer_task)
+    await asyncio.gather(*sim_tasks, consumer, publicar_estado())
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO, format="%(name)s | %(message)s")
     asyncio.run(main())
