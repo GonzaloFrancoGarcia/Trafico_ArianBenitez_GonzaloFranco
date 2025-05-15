@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Dashboard Tráfico Distribuido</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+  <link rel="stylesheet"
+        href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.classless.min.css">
+  <style>
+    .badge {padding:.25rem .6rem;border-radius:.4rem;margin:.25rem}
+    .HEALTHY{background:#198754;color:#fff}
+    .OVERLOADED{background:#ffc107;color:#000}
+    .UNHEALTHY{background:#dc3545;color:#fff}
+  </style>
+</head>
+<body class="container">
+  <h2>Simulación de Tráfico Distribuido</h2>
+
+  <section>
+    <canvas id="bar"></canvas>
+  </section>
+
+  <section id="badges" class="grid"></section>
+
+<script>
+const ctx = document.getElementById('bar').getContext('2d');
+const chart = new Chart(ctx, {
+  type: 'bar',
+  data: {labels:[], datasets:[{label:'Vehículos', data:[]}]},
+  options: {responsive:true}
+});
+
+async function refrescar(){
+  const r = await fetch('/snapshot');
+  const {nodos} = await r.json();
+
+  chart.data.labels              = nodos.map(n=>n.zona);
+  chart.data.datasets[0].data    = nodos.map(n=>n.vehiculos);
+  chart.update();
+
+  const cont = document.getElementById('badges');
+  cont.innerHTML = nodos.map(n=>
+    `<span class="badge ${n.estado}">${n.zona}: ${n.estado}</span>`
+  ).join('');
+}
+refrescar(); setInterval(refrescar, 5000);
+</script>
+</body>
+</html>
