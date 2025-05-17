@@ -1,24 +1,41 @@
 # simulacion_trafico/distribution/migracion_utils.py
 """
-Utilidades para que un nodo averigüe el destino más ligero
-antes de publicar una migración.
+Utilidades de balanceo de carga y elección de nodo destino.
 """
+
+from __future__ import annotations
 import httpx, logging
-from typing import Optional, List
+from typing import List, Optional
+
+_LOG = logging.getLogger("Balanceo")
+
 
 COORD_URL = "http://localhost:8000"
 
-async def destino_menos_cargado(excluir: List[str]) -> Optional[str]:
+
+async def destino_menos_cargado(excluir: List[str] | None = None) -> Optional[str]:
     """
-    Devuelve la zona HEALTHY con menos vehículos,
-    excluyendo las que se pasen en la lista.
+    Devuelve el nombre del nodo con menos vehículos, excluyendo los
+    indicados.  Si no se puede contactar al Coordinador, retorna None.
     """
-    excl_param = ",".join(excluir)
+    excluir = set(excluir or [])
+
     try:
-        async with httpx.AsyncClient(timeout=5) as cli:
-            r = await cli.get(f"{COORD_URL}/nodo_menos_cargado",
-                              params={"exclude": excl_param})
-            return r.json()["zona"]
+        async with httpx.AsyncClient(timeout=2) as cli:
+            r = await cli.get(f"{COORD_URL}/nodos")
+            r.raise_for_status()
+            data = r.json()
     except Exception as exc:
-        logging.getLogger("MigracionUtils").error("Error consultando coordinador: %s", exc)
+        _LOG.warning("No pude consultar al Coordinador: %s", exc)
         return None
+
+    # Filtrar nodos excluidos
+    candidatos = [
+        info for name, info in data.items() if name not in excluir
+    ]
+    if not candidatos:
+        return None
+
+    # Elige el que menos vehículos tenga
+    destino = min(candidatos, key=lambda i: i["vehiculos"])
+    return destino["zona"]
