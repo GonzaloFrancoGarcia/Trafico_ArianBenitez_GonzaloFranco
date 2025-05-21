@@ -8,17 +8,13 @@ async def simulation_loop(simulator, interval):
     """
     while True:
         simulator.update()
-        # print("[Simulación] Estado actualizado.")  # Activar para depuración
+        # print("[Simulación] Estado actualizado.")  # Descomenta para debug
         await asyncio.sleep(interval)
 
 def run_simulation_tasks(simulator, update_interval=1.0):
     """
-    Devuelve una lista de tareas asíncronas necesarias para la simulación:
-    - Actualización periódica del simulador
-    - Aquí se pueden añadir tareas adicionales (sensores, registro, etc.)
+    Devuelve una lista de corutinas (no tareas) para ejecutar la simulación.
+    El hilo que arranque estas corutinas será responsable de convertirlas en tareas.
     """
-    tasks = []
-    main_task = asyncio.create_task(simulation_loop(simulator, update_interval))
-    main_task.set_name("simulacion_loop")
-    tasks.append(main_task)
-    return tasks
+    # Simplemente devolvemos la corutina; no tocamos create_task aquí
+    return [simulation_loop(simulator, update_interval)]

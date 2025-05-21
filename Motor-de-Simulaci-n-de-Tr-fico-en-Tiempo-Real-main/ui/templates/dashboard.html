@@ -1,3 +1,4 @@
+<!-- simulacion_trafico/ui/templates/dashboard.html -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -9,42 +10,73 @@
         href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.classless.min.css">
   <style>
     .badge {padding:.25rem .6rem;border-radius:.4rem;margin:.25rem}
-    .HEALTHY{background:#198754;color:#fff}
-    .OVERLOADED{background:#ffc107;color:#000}
-    .UNHEALTHY{background:#dc3545;color:#fff}
+    .BAJO     {background:#198754;color:#fff}
+    .MODERADO {background:#ffc107;color:#000}
+    .ALTO     {background:#dc3545;color:#fff}
   </style>
 </head>
 <body class="container">
   <h2>Simulación de Tráfico Distribuido</h2>
 
   <section>
-    <canvas id="bar"></canvas>
+    <canvas id="barChart"></canvas>
   </section>
 
   <section id="badges" class="grid"></section>
 
+  <section>
+    <h3>Últimos eventos de migración (demo)</h3>
+    <table id="eventsTable">
+      <thead><tr><th>Origen</th><th>Destino</th><th>Vehículo</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </section>
+
 <script>
-const ctx = document.getElementById('bar').getContext('2d');
+const ctx = document.getElementById('barChart').getContext('2d');
 const chart = new Chart(ctx, {
   type: 'bar',
-  data: {labels:[], datasets:[{label:'Vehículos', data:[]}]},
-  options: {responsive:true}
+  data: { labels: [], datasets: [{ label: 'Vehículos', data: [] }] },
+  options: { responsive: true }
 });
 
-async function refrescar(){
-  const r = await fetch('/snapshot');
-  const {nodos} = await r.json();
+// Buffer de eventos ficticios para demo
+let events = [];
 
-  chart.data.labels              = nodos.map(n=>n.zona);
-  chart.data.datasets[0].data    = nodos.map(n=>n.vehiculos);
+async function refrescar(){
+  const res = await fetch('/snapshot');
+  const { nodos } = await res.json();
+
+  // Actualiza gráfico de barras
+  chart.data.labels = nodos.map(n => n.zona);
+  chart.data.datasets[0].data = nodos.map(n => n.vehiculos);
   chart.update();
 
+  // Badges de estado de tráfico
   const cont = document.getElementById('badges');
-  cont.innerHTML = nodos.map(n=>
-    `<span class="badge ${n.estado}">${n.zona}: ${n.estado}</span>`
+  cont.innerHTML = nodos.map(n =>
+    `<span class="badge ${n.trafico}">${n.zona}: ${n.trafico}</span>`
+  ).join('');
+
+  // Genera un evento de migración aleatorio (solo demo)
+  if (Math.random() < 0.2 && nodos.length > 1) {
+    const o = nodos[Math.floor(Math.random()*nodos.length)].zona;
+    const candidatos = nodos.filter(n=>n.zona!==o);
+    const d = candidatos[Math.floor(Math.random()*candidatos.length)].zona;
+    const v = 'V' + Math.floor(Math.random()*1000);
+    events.unshift({origin:o, dest:d, veh:v});
+    if (events.length>10) events.pop();
+  }
+
+  // Pinta la tabla de eventos
+  const tbody = document.querySelector('#eventsTable tbody');
+  tbody.innerHTML = events.map(e =>
+    `<tr><td>${e.origin}</td><td>${e.dest}</td><td>${e.veh}</td></tr>`
   ).join('');
 }
-refrescar(); setInterval(refrescar, 5000);
+
+refrescar();
+setInterval(refrescar, 5000);
 </script>
 </body>
 </html>
